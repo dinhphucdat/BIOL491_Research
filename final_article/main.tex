@@ -1,0 +1,88 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{caption}
+\usepackage{array}
+\usepackage{subcaption}
+\usepackage{appendix}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{apacite}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage[
+    top=0.5in, 
+    bottom=0.5in, 
+    left=0.8in, 
+    right=0.8in
+]{geometry}
+\usepackage[utf8]{inputenc}
+
+
+
+% Paragraph spacing
+\setlength{\parskip}{1em}
+
+% STYLING AND FORMATTING THE CODE CHUNK
+\lstset {
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{violet}\bfseries, 
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{orange},
+    breaklines=true,
+    captionpos=b,
+    showstringspaces=false, 
+    literate={~}{{\textasciitilde}}1
+           {_}{{\_{}}}1
+           {^}{{\^{}}}1
+           {\\}{{\textbackslash}}1
+           {`}{{\textasciigrave}}1
+           {!}{{\texttt{!}}}1
+           {?}{{\texttt{?}}}1
+           {\$}{{\textdollar}}1,
+    aboveskip = 2em, 
+    belowskip = 2em, 
+    xleftmargin = 1.5em, 
+    xrightmargin = 1.5em, 
+    language=Python
+}
+
+% Returns a single figure with its caption and title
+\newcommand{\figurewithcaption}[3]{
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{#1}
+        \caption{#3}
+        \label{fig:#2}
+    \end{subfigure}
+}
+
+% The width of plots relative to the page
+\newcommand{\plotwidth}{0.85}
+
+% MAKE TITLE & ADD DATE
+\title{Population Dynamic Simulation: From ABM to Neural Network Integration with NeuralABM}
+\author{Dat Dinh}
+\date{\today}
+
+% ------------------ DOCUMENT STARTS HERE ------------------------
+\begin{document}
+\maketitle
+
+\section{Abstract}
+
+\section{Introduction}
+
+\section{Method}
+
+\section{Result}
+
+\section{Discussion}
+
+\bibliographystyle{apacite}
+\bibliography{references}
+\end{document}
