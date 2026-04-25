@@ -7,10 +7,12 @@
 \usepackage{listings}
 \usepackage{tabularx}
 \usepackage{xcolor}
-\usepackage{apacite}
+%\usepackage{apacite}
 \usepackage{float}
 \usepackage{parskip}
 \usepackage{amsmath}
+\usepackage{csquotes}
+\usepackage{hyperref}
 \usepackage[
     top=0.5in, 
     bottom=0.5in, 
@@ -65,8 +67,8 @@
 \newcommand{\plotwidth}{0.85}
 
 % MAKE TITLE & ADD DATE
-\title{Population Dynamic Simulation: From ABM to Neural Network Integration with NeuralABM}
-\author{Dat Dinh}
+\title{Population Dynamic Simulation: From sPEGG Agent-Based Simulation Model (ABM) to Neural Network Integration with NeuralABM}
+\author{Dat Dinh \\ BIOL-491}
 \date{\today}
 
 % ------------------ DOCUMENT STARTS HERE ------------------------
@@ -76,13 +78,54 @@
 \section{Abstract}
 
 \section{Introduction}
+As global warming and climate change swing in an unpredictable direction nowadays, building predictive mathematical models forecasting such inconsistent evolutionary dynamics has been rendered more vital than ever. However, the accurate modeling of the population dynamics most of the time depends hugely on the spatial variation of each individual with various genotypes \cite{okamoto2018}. Additionally, understanding the genetic architectures of each individual in the population is essential \cite{okamoto2018}. Both of these two aspects can never be easily modeled with either Ordinary or Stochastic Differential Equations (ODE or SDE). Hence, sPEGG, abbreviating for \textbf{simulating Population Evolution on General Purpose Graphic Processing Unit}, was designed as a form of agent-based population simulation model to cover those aforementioned needs, where each individual in the population was considered an \enquote{agent} \cite{okamoto2018}.
 
-\section{Method}
+sPEGG starts with a set of simulation parameters defined and set by programmers, and after a certain amount of time steps, it provides the population dynamic data specific to those defined parameters earlier \cite{okamoto2018}. Interestingly, in this Big Data world where the global wildlife and field ecological database is massively growing, there comes a question of whether the evolutionary patterns in such data can be explained using sPEGG's architecture; and if so, we need to estimate its simulation parameters that will eventually reconstruct those similar patterns observed in real population data.
+
+To estimate numerical input parameters to any procedure in order to minimize the difference between its predicted output and the truth (often referred to as \textbf{loss}), numerical optization solvers are often employed, which guide each input parameter against its gradient (derivative) until the loss value gets stuck inside any minima. But approximating the gradient for one individual parameter at a time is considered inefficient for a big estimation project that involves a gigantic amount of parameters \cite{thgaskin2023neural}, for two reasons: (1) We should use GPU to parallelize differentiating all parameters, and (2) derivative approximation is never as exact as the auto-differentiation functionality provided by multiple Python machine learning frameworks, such as \textbf{PyTorch} \cite{paszke2017automatic}. Thanks to its primary support of Neural Network engineering, PyTorch also comes with GPU parallelizing backend and auto-gradient feature \cite{paszke2017automatic}, enforcing the accuracy of gradient calculation.
+
+Given that opportunity, we essentially asked ourselves if it would be feasible to incorporate sPEGG simulation model as a layer in any neural network architecture, and if so, to what extent that such a neural network could capture evolutionary dynamic patterns in the provided training data.
+
+\section{Objectives}
+
+In this study, we aimed to build a neural network pipeline incorporating two different sPEGG simulation models, one whose all genes contributed equally to the reproductive potential, another whose some genes contributed more to reproduction than other genes. To start easy, we only set 3 parameters, consisting of the recombination rates of both 3 loci in the model set up, to be all simulation parameters and explore their effects onto the genotypes that control the reproductive potential. We used the pre-implemented \textbf{NeuralABM} infrastructure to automate the workflow at ease, from sequencing population data and preparing for training dataset, to training a neural network and drawing its diagnostic plots \cite{thgaskin2023neural}. NeuralABM also makes parameter inputting (both Data Generation, ABM, and Neural Network parameters) more convenient. There is a note here, though, is that NeuralABM only supplies an infrastructure to automate the Neural Net training process, but does not provide users with a Neural Network model, which means users have to use PyTorch to build their desired Neural Network architecture, although it does provide the implementation of a very simple feed-forward network model \cite{thgaskin2023neural}.
+
+\section{Methodology}
+\subsection{Population Data Availability}
+
+Due to the time constraint of the coursework (4-5 months), we were not able to find and process such real-life population data. Instead, we took the first 200 base pairs of the ecoli genome, provided by \textbf{snpArcher} \cite{snparcher2024}, as our reference genome, represented as a \textbf{fasta} file. We then had a Python script simulate the genetic variability in the population by augmenting the original reference genome, as seen in appendix \ref{app:code}. Specifically, the original sequence was copied all over to 20 individuals in the population, but there would be randomly determined mutations at some or all of these three locus positions, 10, 50, and 100. Such a procedure was repeated 10 times since we wanted to simulate across 10 time steps. Finishing such a long process, we obtained sequence data (fasta files) for all individuals at all time steps, each with a different genetic variation.
+
+However, snpArcher compares sequence reads, not the whole genome data, against the reference genome to finally produce a Variant-Call File summarizing genetic variation \cite{snparcher2024}. Thus, we need to obtain sequence reads, represented as \textbf{fastq} files, of all individuals in the population across all time steps. Again, with simulated field data, we were not capable of using the sequencing technology in the lab to generate fastq files, so we had to simulate the reads from each individual's genome fasta file using a software called \textbf{ART 454} \cite{art454_2012}. Such a software can simulate a sequencing error profile representing a real sequencing technology \cite{art454_2012}.
+
+Once a set of sequencing reads for the population across time was obtained, snpArcher was used to compare the individual reads to the reference genome and produce Variant-Call Files, since summarizing the genetic variability information requires multiple steps, all of which should be both handled by snpArcher \cite{snparcher2024}. This tool requires two other configuration files in addition to the reference genome's fasta and individual read fastq's, one of which is snpArcher parameters' configuration and another is the sample sheet, where each row contains two fastq files from a double pair-end read of an individual. These two configuration files were generated by a Python script, annotated in appendix \ref{app:code}. Downstream, the resulting Variant-Call Files were then processed by \textbf{vcftools}, which directly computed the allele frequency using the genetic variability summary presented in the VCFs \cite{vcftools2011}. Parts of these allele frequency data would be manipulated as our Training Dataset for the Neural Network pipeline.
+
+\subsection{Training Data Generation}
+
+Once our population dynamic data were generated and sequenced, for each simulation time step, we had one VCF file covering genetic variability of the entire population; in this case, we decided to entail 10 time steps. We then fed those 10 VCF files, one at a time, into the \textbf{vcftools} to have it output the population allele frequency at a time step, which was used to make one \enquote{row} in the training dataset. Since earlier on we mentioned that the script simulating genome data for each individual considered mutations at at most 3 loci, there should be at most 3 rows in the vcftools's output. However, only the frequency at one locus was favored within the training data, so we had a workflow configuration variable cover which locus to be examined (appendix \ref{app:code}). That same locus was being tracked across all 10 time steps, so there were 10 rows in the training dataset, each with the allele frequency at locus specified in the configuration file at a specific time step.
+
+\subsection{sPEGG simulation model architectures}
+
+
 
 \section{Result}
 
 \section{Discussion}
 
-\bibliographystyle{apacite}
+
+
+\bibliographystyle{plain}
 \bibliography{references}
+
+\appendixpage
+\begin{appendices}
+    \section{Data and Source Code Availability} \label{app:code}
+    Visit \href{https://github.com/dinhphucdat/NeuralABM.git}{https://github.com/dinhphucdat/NeuralABM.git}, the project's repository.
+    \begin{itemize}
+        \item Python script to simulate population reads: \href{https://github.com/dinhphucdat/NeuralABM/blob/spegg_neural/models/SpeggGenoDiffABM/ensemble_training/read_simulator/sequence_generator.py}{Link}
+        \item NeuralABM workflow configuration variables: \href{https://github.com/dinhphucdat/NeuralABM/blob/spegg_neural/models/SpeggGenoDiffABM/ensemble_training/SPEGGGenDiff_cfg.yml}{Link}
+    \end{itemize}
+    
+
+\end{appendices}
+
 \end{document}
