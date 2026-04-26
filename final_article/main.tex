@@ -13,6 +13,9 @@
 \usepackage{amsmath}
 \usepackage{csquotes}
 \usepackage{hyperref}
+\usepackage{algorithmicx}
+\usepackage{algorithm2e}
+\usepackage{algpseudocodex}
 \usepackage[
     top=0.5in, 
     bottom=0.5in, 
@@ -20,6 +23,7 @@
     right=0.8in
 ]{geometry}
 \usepackage[utf8]{inputenc}
+\usepackage{tikz}
 
 
 
@@ -80,9 +84,9 @@
 \section{Introduction}
 As global warming and climate change swing in an unpredictable direction nowadays, building predictive mathematical models forecasting such inconsistent evolutionary dynamics has been rendered more vital than ever. However, the accurate modeling of the population dynamics most of the time depends hugely on the spatial variation of each individual with various genotypes \cite{okamoto2018}. Additionally, understanding the genetic architectures of each individual in the population is essential \cite{okamoto2018}. Both of these two aspects can never be easily modeled with either Ordinary or Stochastic Differential Equations (ODE or SDE). Hence, sPEGG, abbreviating for \textbf{simulating Population Evolution on General Purpose Graphic Processing Unit}, was designed as a form of agent-based population simulation model to cover those aforementioned needs, where each individual in the population was considered an \enquote{agent} \cite{okamoto2018}.
 
-sPEGG starts with a set of simulation parameters defined and set by programmers, and after a certain amount of time steps, it provides the population dynamic data specific to those defined parameters earlier \cite{okamoto2018}. Interestingly, in this Big Data world where the global wildlife and field ecological database is massively growing, there comes a question of whether the evolutionary patterns in such data can be explained using sPEGG's architecture; and if so, we need to estimate its simulation parameters that will eventually reconstruct those similar patterns observed in real population data.
+sPEGG starts with a set of simulation parameters defined and set by programmers, and after a certain amount of time steps, it provides the population dynamic data specific to those defined parameters earlier \cite{okamoto2018}. Interestingly, in this Big Data world where the global wildlife and field ecological database is massively growing, there comes a compelling question of whether the evolutionary patterns in such data can be explained using sPEGG's architecture; and if so, we need to estimate its simulation parameters that will eventually reconstruct those similar patterns observed in real population data.
 
-To estimate numerical input parameters to any procedure in order to minimize the difference between its predicted output and the truth (often referred to as \textbf{loss}), numerical optization solvers are often employed, which guide each input parameter against its gradient (derivative) until the loss value gets stuck inside any minima. But approximating the gradient for one individual parameter at a time is considered inefficient for a big estimation project that involves a gigantic amount of parameters \cite{thgaskin2023neural}, for two reasons: (1) We should use GPU to parallelize differentiating all parameters, and (2) derivative approximation is never as exact as the auto-differentiation functionality provided by multiple Python machine learning frameworks, such as \textbf{PyTorch} \cite{paszke2017automatic}. Thanks to its primary support of Neural Network engineering, PyTorch also comes with GPU parallelizing backend and auto-gradient feature \cite{paszke2017automatic}, enforcing the accuracy of gradient calculation.
+To estimate numerical input parameters to any procedure in order to minimize the difference between its predicted output and the truth (often referred to as \textbf{loss}), numerical optimization solvers are often employed, which guide each input parameter against its gradient (derivative) until the loss value gets stuck inside any minima. But approximating the gradient for one individual parameter at a time is considered inefficient for a big estimation project that involves a gigantic amount of parameters \cite{thgaskin2023neural}, for two reasons: (1) We should use GPU to parallelize differentiating all parameters, and (2) derivative approximation is never as exact as the auto-differentiation functionality provided by multiple Python machine learning frameworks, such as \textbf{PyTorch} \cite{paszke2017automatic}. Thanks to its primary support of Neural Network engineering, PyTorch also comes with GPU parallelizing backend and auto-gradient feature \cite{paszke2017automatic}, enforcing the accuracy of gradient calculation.
 
 Given that opportunity, we essentially asked ourselves if it would be feasible to incorporate sPEGG simulation model as a layer in any neural network architecture, and if so, to what extent that such a neural network could capture evolutionary dynamic patterns in the provided training data.
 
@@ -101,11 +105,74 @@ Once a set of sequencing reads for the population across time was obtained, snpA
 
 \subsection{Training Data Generation}
 
-Once our population dynamic data were generated and sequenced, for each simulation time step, we had one VCF file covering genetic variability of the entire population; in this case, we decided to entail 10 time steps. We then fed those 10 VCF files, one at a time, into the \textbf{vcftools} to have it output the population allele frequency at a time step, which was used to make one \enquote{row} in the training dataset. Since earlier on we mentioned that the script simulating genome data for each individual considered mutations at at most 3 loci, there should be at most 3 rows in the vcftools's output. However, only the frequency at one locus was favored within the training data, so we had a workflow configuration variable cover which locus to be examined (appendix \ref{app:code}). That same locus was being tracked across all 10 time steps, so there were 10 rows in the training dataset, each with the allele frequency at locus specified in the configuration file at a specific time step.
+Once our population dynamic data were generated and sequenced, for each simulation time step, we had one VCF file cover genetic variability of the entire population; in this case, we decided to entail 10 time steps. We then fed those 10 VCF files, one at a time, into the \textbf{vcftools} to have it output the population allele frequency at a time step, which was used to make one \enquote{row} in the training dataset. Since earlier on we mentioned that the script simulating genome data for each individual considered mutations at at most 3 loci, there should be at most 3 rows in the vcftools's output. However, only the frequency at one locus was favored within the training data, so we had a workflow configuration variable cover which locus to be examined (appendix \ref{app:code}). That same locus was being tracked across all 10 time steps, so there were 10 rows in the training dataset, each with the allele frequency at locus specified in the configuration file at a specific time step.
 
-\subsection{sPEGG simulation model architectures}
+\subsection{sPEGG Simulation Model Architectures}
 
+In order to construct our population simulation models, the sPEGG codebase was imported. Such a codebase implemented fundamental population movements such as reproduction, deaths, and even lower-order movements such as fertilization, mutations, and recombinations \cite{okamoto2018}. The performance of any models built upon sPEGG codebase is enhanced by manipulating the parallelizing advantage of GPUs using \textbf{CUDA} library, a branch of \textbf{C++} language \cite{cuda2008}.
 
+To fit into the time frame of the coursework and also keep the pipeline implementation simple, we decided to use the very basic design of a simulation model from sPEGG described in section 2.2 of the article \cite{okamoto2018} or in the \texttt{Tutorial\_Simulation} example in the sPEGG codebase (appendix \ref{app:code}). \emph{We aimed to study different convergences of two versions of the sPEGG simulation model: (1) each gene contributes equally to the reproductive advantage, (2) one gene contributes more to such than others}. Therefore, one key difference in the implementation of these two versions lies in the genotype-phenotype mapping between a genotype and the reproduction-determinant phenotype.
+
+\begin{algorithm}[H]
+\caption{sPEGG simulation model with all genes playing the equal roles in reproduction. In this procedure shown, two loci contribute equally to the reproduction phenotype.} \label{norepro}
+\begin{algorithmic}[1]
+    \Function{mapGenotypeToPhenotype}{momLocus1, dadLocus1, momLocus2, dadLocus2, coefsList}
+        \State constant = coefsList[1]
+        \State locus1Coef = coefsList[2]
+        \State locus2Coef = coefsList[3]
+        \State fecundity = constant + locus1Coef $\cdot0.5\cdot$ (momLocus1 + dadLocus1) + locus2Coef $\cdot0.5\cdot$ (momLocus2 + dadLocus2)
+        \State \Return fecundity
+    \EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+    \caption{sPEGG simulation model with genes playing unequal roles in reproduction. In this procedure shown, locus one influences fecundity 4 times stronger than locus 2.} \label{repro}
+    \begin{algorithmic}[1]
+        \Function{mapGenotypeToPhenotype}{momLocus1, dadLocus1, momLocus2, dadLocus2, coefsList}
+            \State constant = coefsList[1]
+            \State locus1Coef = coefsList[2]
+            \State locus2Coef = coefsList[3]
+            \State fecundity = constant + locus1Coef $\cdot0.5\cdot4\cdot$ (momLocus1 + dadLocus1) + locus2Coef $\cdot0.5\cdot$ (momLocus2 + dadLocus2)
+            \State \Return fecundity
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+We hypothesized that the Neural Network having the first sPEGG model would not converge well, while the one with differential reproductive genetic influences should somewhat converge in terms of the parameter(s) driving the evolution of the genotype (or locus) that had the strongest influence on the fecundity. In this case, both of these two models had three simulation parameters, which were the \emph{recombination rates for both three loci}. The implementation of both these two models can be found in appendix \ref{app:code}.
+
+The challenge emerged when the simulation models were written in C, but the overall NeuralABM pipeline and PyTorch Neural Network model were supposed to be in Python. In addressing it, we linked the object code of the simulation models directly with the Python code via \textbf{Pybind11}, which allowed us to call a C function directly in Python code as if it were a Python function \cite{pybind11}. That way, we could easily transfer the simulation parameters from our overall Python pipeline to C-implemented simulation models, then such models would transfer the simulated population output back to the earlier Python pipeline once the simulation finished. The github branch of the sPEGG codebase version that does support the pybind11 linker can be seen in appendix \ref{app:code}.
+
+\subsection{Neural Network Architecture}
+
+Again, for simplicity, we decided to start out with a simple feed-forward neural network architecture that receives an input of size corresponding to the size of the training dataset, and has three hidden nodes, so that the only layer inside of such a network would immediately produce a vector of only three elements, which were finally used as three simulation parameters, as in \ref{fig:nn}. Given the complete elimination of the normalized complexity of a typical neural network (most networks have multiple layers) and any further hidden nodes beyond the required amount to be able to get to the output size (in this case, 3), the job for our neural network was merely a numerical optimization task. The reason for this over-simplification was because of the inherent gradient vanishing problem \cite{gradientvanishing2013}, often happening when applying the chain rule across a very sophisticated network, and it would be better to just start out simple when we had not yet taken into account any probable inconsistency of the simulation models. That way, we could lay out a solid foundation, upon which we would, in the future, build more complicated but predictive architectures.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        \node[draw, circle, text width=4cm, align=center] (A) at (0,0) {N timestep population data};
+        \node[draw, circle] (B) at (6,0) {Layer 1 (N, 3)};
+        \node[draw, circle, text width=4cm, align=center] (C) at (12, 0) {Output 3 simulation parameters};
+        \draw[->] (A) -- (B);
+        \draw[->] (B) -- (C);
+    \end{tikzpicture}
+    \caption{Neural Network Architecture. Here we completely reduced the complexity of a typical neural network to account for any potential inconsistency in our simulation models}
+    \label{fig:nn}
+\end{figure}
+
+Every neural network model must own a loss function that compute the \enquote{error} in its current prediction, from which it can learn and attempt to minimize. Once our neural network architecture outputs the three numbers supposed to be simulation parameters, they would be passed as arguments into a loss function, inside which a sPEGG simulation model would use them to reconstruct the population genetic data, and a Mean-Squared Error function would compute the difference between the training dataset and such simulated population data. Such a difference would be the final loss value for our neural network architecture. Described in \ref{alg:loss} is the procedure of such a loss function.
+
+\begin{algorithm}
+    \begin{algorithmic}[1]
+        \Function{loss}{loc1RecomRate, loc2RecomRate, loc3RecomRate, trainingData}
+            \State simulatedPop = \Call{spegg}{loc1RecomRate, loc2RecomRate, loc3RecomRate}
+            \State diff = \Call{MSE}{simulatedPop, trainingData}
+            \State \Return diff
+        \EndFunction
+    \end{algorithmic}
+    \caption{Loss function. First, it has predicted parameters from the neural net fed into sPEGG to simulate a population data. Then, such simulated data are compared against the training data using an MSE function.}
+    \label{alg:loss}
+\end{algorithm}
 
 \section{Result}
 
@@ -123,6 +190,10 @@ Once our population dynamic data were generated and sequenced, for each simulati
     \begin{itemize}
         \item Python script to simulate population reads: \href{https://github.com/dinhphucdat/NeuralABM/blob/spegg_neural/models/SpeggGenoDiffABM/ensemble_training/read_simulator/sequence_generator.py}{Link}
         \item NeuralABM workflow configuration variables: \href{https://github.com/dinhphucdat/NeuralABM/blob/spegg_neural/models/SpeggGenoDiffABM/ensemble_training/SPEGGGenDiff_cfg.yml}{Link}
+        \item sPEGG codebase: \href{https://github.com/kewok/spegg}{Link}
+        \item sPEGG implementation for model with no reproduction determining genotype: \href{https://github.com/dinhphucdat/NeuralABM/tree/spegg_neural/models/SpeggABM/Tutorial_Simulation}{Link}
+        \item sPEGG implementation for model with reproduction determining genotype: \href{https://github.com/dinhphucdat/NeuralABM/tree/spegg_neural/models/SpeggGenoDiffABM/GenotypeDiffFecundity}{Link}
+        \item sPEGG codebase version with pybind11 object linker: \href{https://github.com/dinhphucdat/spegg/tree/refactor_code/}{Link}
     \end{itemize}
     
 
