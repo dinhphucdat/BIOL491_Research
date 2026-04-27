@@ -60,7 +60,7 @@
 
 % Returns a single figure with its caption and title
 \newcommand{\figurewithcaption}[3]{
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{subfigure}[b]{0.95\textwidth}
         \includegraphics[width=\textwidth]{#1}
         \caption{#3}
         \label{fig:#2}
@@ -111,7 +111,7 @@ Once our population dynamic data were generated and sequenced, for each simulati
 
 In order to construct our population simulation models, the sPEGG codebase was imported. Such a codebase implemented fundamental population movements such as reproduction, deaths, and even lower-order movements such as fertilization, mutations, and recombinations \cite{okamoto2018}. The performance of any models built upon sPEGG codebase is enhanced by manipulating the parallelizing advantage of GPUs using \textbf{CUDA} library, a branch of \textbf{C++} language \cite{cuda2008}.
 
-To fit into the time frame of the coursework and also keep the pipeline implementation simple, we decided to use the very basic design of a simulation model from sPEGG described in section 2.2 of the article \cite{okamoto2018} or in the \texttt{Tutorial\_Simulation} example in the sPEGG codebase (appendix \ref{app:code}). \emph{We aimed to study different convergences of two versions of the sPEGG simulation model: (1) each gene contributes equally to the reproductive advantage, (2) one gene contributes more to such than others}. Therefore, one key difference in the implementation of these two versions lies in the genotype-phenotype mapping between a genotype and the reproduction-determinant phenotype.
+To fit into the time frame of the coursework and also keep the pipeline implementation simple, we decided to use the very basic design of a simulation model from sPEGG described in section 2.2 of the article \cite{okamoto2018} or in the \texttt{Tutorial\_Simulation} example in the sPEGG codebase (appendix \ref{app:code}). \emph{We aimed to study different convergences of two versions of the sPEGG simulation model: (1) each gene contributes equally to the reproductive advantage, (2) one gene contributes more to such than others}. Therefore, one key difference in the implementation of these two versions lies in the genotype-phenotype mapping between a genotype and the reproduction-determinant phenotype (algorithms \ref{norepro} and \ref{repro}).
 
 \begin{algorithm}[H]
 \caption{sPEGG simulation model with all genes playing the equal roles in reproduction. In this procedure shown, two loci contribute equally to the reproduction phenotype.} \label{norepro}
@@ -124,6 +124,7 @@ To fit into the time frame of the coursework and also keep the pipeline implemen
         \State \Return fecundity
     \EndFunction
 \end{algorithmic}
+\vspace{0.6em}
 \end{algorithm}
 
 \begin{algorithm}[H]
@@ -137,6 +138,7 @@ To fit into the time frame of the coursework and also keep the pipeline implemen
             \State \Return fecundity
         \EndFunction
     \end{algorithmic}
+    \vspace{0.6em}
 \end{algorithm}
 
 We hypothesized that the Neural Network having the first sPEGG model would not converge well, while the one with differential reproductive genetic influences should somewhat converge in terms of the parameter(s) driving the evolution of the genotype (or locus) that had the strongest influence on the fecundity. In this case, both of these two models had three simulation parameters, which were the \emph{recombination rates for both three loci}. The implementation of both these two models can be found in appendix \ref{app:code}.
@@ -145,7 +147,7 @@ The challenge emerged when the simulation models were written in C, but the over
 
 \subsection{Neural Network Architecture}
 
-Again, for simplicity, we decided to start out with a simple feed-forward neural network architecture that receives an input of size corresponding to the size of the training dataset, and has three hidden nodes, so that the only layer inside of such a network would immediately produce a vector of only three elements, which were finally used as three simulation parameters, as in \ref{fig:nn}. Given the complete elimination of the normalized complexity of a typical neural network (most networks have multiple layers) and any further hidden nodes beyond the required amount to be able to get to the output size (in this case, 3), the job for our neural network was merely a numerical optimization task. The reason for this over-simplification was because of the inherent gradient vanishing problem \cite{gradientvanishing2013}, often happening when applying the chain rule across a very sophisticated network, and it would be better to just start out simple when we had not yet taken into account any probable inconsistency of the simulation models. That way, we could lay out a solid foundation, upon which we would, in the future, build more complicated but predictive architectures.
+Again, for simplicity, we decided to start out with a simple feed-forward neural network architecture that receives an input of size corresponding to the size of the training dataset, and has three hidden nodes, so that the only layer inside of such a network would immediately produce a vector of only three elements, which were finally used as three simulation parameters, as in figure \ref{fig:nn}. Given the complete elimination of the normalized complexity of a typical neural network (most networks have multiple layers) and any further hidden nodes beyond the required amount to be able to get to the output size (in this case, 3), the job for our neural network was merely a numerical optimization task. The reason for this over-simplification was because of the inherent gradient vanishing problem \cite{gradientvanishing2013}, often happening when applying the chain rule across a very sophisticated network, and it would be better to just start out simple when we had not yet taken into account any probable inconsistency of the simulation models. That way, we could lay out a solid foundation, upon which we would, in the future, build more complicated but predictive architectures.
 
 \begin{figure}[H]
     \centering
@@ -160,7 +162,7 @@ Again, for simplicity, we decided to start out with a simple feed-forward neural
     \label{fig:nn}
 \end{figure}
 
-Every neural network model must own a loss function that compute the \enquote{error} in its current prediction, from which it can learn and attempt to minimize. Once our neural network architecture outputs the three numbers supposed to be simulation parameters, they would be passed as arguments into a loss function, inside which a sPEGG simulation model would use them to reconstruct the population genetic data, and a Mean-Squared Error function would compute the difference between the training dataset and such simulated population data. Such a difference would be the final loss value for our neural network architecture. Described in \ref{alg:loss} is the procedure of such a loss function.
+Every neural network model must own a loss function that compute the \enquote{error} in its current prediction, from which it can learn and attempt to minimize. Once our neural network architecture outputs the three numbers supposed to be simulation parameters, they would be passed as arguments into a loss function, inside which a sPEGG simulation model would use them to reconstruct the population genetic data, and a Mean-Squared Error function would compute the difference between the training dataset and such simulated population data. Such a difference would be the final loss value for our neural network architecture. Described in algorithm \ref{alg:loss} is the procedure of such a loss function.
 
 \begin{algorithm}
     \begin{algorithmic}[1]
@@ -170,11 +172,78 @@ Every neural network model must own a loss function that compute the \enquote{er
             \State \Return diff
         \EndFunction
     \end{algorithmic}
+    \vspace{0.6em}
     \caption{Loss function. First, it has predicted parameters from the neural net fed into sPEGG to simulate a population data. Then, such simulated data are compared against the training data using an MSE function.}
     \label{alg:loss}
 \end{algorithm}
 
 \section{Result}
+\subsection{Platform Incompatibility}
+
+With the integration of sPEGG into the overall neural network architecture, we had believed that it would have smoothly auto-differentiated the three parameters (recombination rates of 3 loci) in parallel, until we discovered that every component of the neural network had to be programmed in PyTorch to be able to benefit from its auto-differentiation feature \cite{paszke2017automatic}. Here, our sPEGG models were both crafted even in another language, so when applying the chain rule, the gradient kept back-propagating until it encountered sPEGG, which was when the \enquote{computational graph} got disconnected \cite{paszke2017automatic}. That is because PyTorch \enquote{did not know} how to differentiate a numerical function programmed using an entire other platform, so the chain rule was unfortunately halted there.
+
+So what was the workaround? Although Neural Network engineering with Pytorch requires every process and layer to be entirely written in terms of PyTorch tensors and operations, but it does provide a \enquote{wrapper} for non-PyTorch-native components. Here is how it functions:
+
+\begin{figure}[H]
+\begin{lstlisting}
+    class Loss(torch.autograd.Function):
+        @staticmethod
+        def forward(threeRecomRates, trainingData):
+            """
+            This function calculates loss!
+            """
+            simulatedData = sPEGG(threeRecomRates)
+            loss = MSE(simulatedData, trainingData)
+            return loss
+        
+        @staticmethod
+        def backward(currentThreeRecomRates, downstreamGradients):
+            """
+            This function helps calculate derivatives!
+            """
+            gradientThreeRecomRates = [0, 0, 0]
+            for i in range(0, 3):
+                currentParam = currentThreeRecomRates
+                h = 0.01
+                y = MSE(sPEGG(currentThreeRecomRates), trainingData)
+                yh = MSE(sPEGG(currentThreeRecomRates[(i) += h]), trainingData)
+                
+                # one at a time, compute the gradient of each parameter
+                gradientThreeRecomRates[i] = (y - yh) / h
+            return gradientThreeRecomRates
+
+\end{lstlisting}
+\end{figure}
+
+This essentially wraps sPEGG around PyTorch, which allows PyTorch to be able to compute sPEGG's gradients and seamlessly backpropagate. However, this workaround \textbf{approximates}, but does not \textbf{auto-differentiate}, each parameter's gradient, leading to an approximation error. Moreover, the above script only computes the derivative for one parameter at a time, so we did not really leverage the parallelizing advantage of PyTorch auto-differentiation feature here. Because of this platform incompatibility, our neural network was only performing as much as a regular numerical optimization function such as \texttt{optim()} in R \cite{r2024}, or \texttt{scipy.optimize.minimize()} in Python \cite{scipy2020}.
+
+\subsection{Roles of the Fecundity-Controlling Genotype}
+
+Contradicting to our hypothesis, the training loss for the model without any dinstinct fecundity-enhancing genotype showed a more consistently decreasing loss progression (figure \ref{fig:nogendiffloss}), while the one with loci 1 distinctly enhancing fecundity showed a more erratic yet still decreasing loss (figure \ref{fig:gendiffloss}).
+
+The progression of three parameters (recombination rates of both 3 loci) was also distinct between two models. For the model without a specific fecundity genotype, genotype 1 recombination rate smoothly converged to near 0, while that of the other two genotypes smoothly converged to 1 (figure \ref{fig:nogendiffpred}). Conversely, for the other model with genotype 1 enhancing fecundity, the parameter convergences were a bit bumpier and eventually landed somewhere between 0 and 1, but never on those two bounds (figure \ref{fig:gendiffpred}). This suggests that with a fecundity-enhancing genotype, the overall evolutionary picture experiences a \enquote{tug-of-war} between the interwoven effects of both mortality-controlling and fecundity-controlling genotypes.
+
+\begin{figure}[h]
+    \centering
+    \figurewithcaption{assets/speggabm_loss.png}{nogendiffloss}{
+        Training loss of the neural network architecture incorporating sPEGG model without any fecundity-determining genotype.
+    }
+    \figurewithcaption{assets/speggabm_pred.png}{nogendiffpred}{
+        Three-parameter prediction of the neural network architecture incorporating sPEGG model without any fecundity-determining genotype.
+    }
+    \caption{Neural Network incorporating sPEGG model without any fecundity-determining genotype} \label{fig:speggabmstuff}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \figurewithcaption{assets/spegggendiff_loss.png}{gendiffloss}{
+        Training loss of the neural network architecture incorporating sPEGG model with loci 1 controlling fecundity.
+    }
+    \figurewithcaption{assets/spegggendiff_pred.png}{gendiffpred}{
+        Three-parameter prediction of the neural network architecture incorporating sPEGG model with loci 1 controlling fecundity.
+    }
+    \caption{Neural Network incorporating sPEGG model with loci 1 controlling fecundity} \label{fig:spegggendiffstuff}
+\end{figure}
 
 \section{Discussion}
 
