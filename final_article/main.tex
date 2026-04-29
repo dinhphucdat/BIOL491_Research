@@ -14,7 +14,7 @@
 \usepackage{csquotes}
 \usepackage{hyperref}
 \usepackage{algorithmicx}
-\usepackage{algorithm2e}
+\usepackage{algorithm}
 \usepackage{algpseudocodex}
 \usepackage[
     top=0.5in, 
@@ -81,8 +81,10 @@
 
 \section{Abstract}
 
+Predictive mathematical models are increasingly demanded and employed to provide a deeper understanding about the population dynamics, especially with the current unpredictable global warming progression. However, the early rise of global population dynamic databases also increases the need for finding the exact set of parameters in a population simulation models that can also explain such a pattern observed in the real evolutionary data. We integrated our sPEGG agent-based simulation model as a part of a neural network architecture to explore its predictive power onto three sPEGG simulation parameters, the recombination rates regarding three loci. We later discovered that our model did converge, such as suppressed recombination at pleiotropic loci and accelerated shuffling at beneficial ones, aligning with Antagonistic Pleiotropy and Fisher-Muller theories. We also observed some stochastic volatility ascribed to some indifferentiable bottlenecks in simulation and proposed a technical roadmap for their resolution. Finally, our work represents a technical innovation of novel Hybrid Simulation - Neural Network Architectures that can potentially address the efficiency in computational ecological modeling.
+
 \section{Introduction}
-As global warming and climate change swing in an unpredictable direction nowadays, building predictive mathematical models forecasting such inconsistent evolutionary dynamics has been rendered more vital than ever. However, the accurate modeling of the population dynamics most of the time depends hugely on the spatial variation of each individual with various genotypes \cite{okamoto2018}. Additionally, understanding the genetic architectures of each individual in the population is essential \cite{okamoto2018}. Both of these two aspects can never be easily modeled with either Ordinary or Stochastic Differential Equations (ODE or SDE). Hence, sPEGG, abbreviating for \textbf{simulating Population Evolution on General Purpose Graphic Processing Unit}, was designed as a form of agent-based population simulation model to cover those aforementioned needs, where each individual in the population was considered an \enquote{agent} \cite{okamoto2018}.
+As global warming and climate change swing in an unpredictable direction nowadays, building predictive mathematical models forecasting such inconsistent evolutionary dynamics has been rendered more vital than ever. However, accurate modeling of the population dynamics most of the time depends hugely on the spatial variation of each individual with various genotypes \cite{okamoto2018}. Additionally, understanding the genetic architectures of each individual in the population is essential \cite{okamoto2018}. Both of these two aspects can never be easily modeled with either Ordinary or Stochastic Differential Equations (ODE or SDE). Hence, sPEGG, abbreviating for \textbf{simulating Population Evolution on General Purpose Graphic Processing Unit}, was designed as a form of agent-based population simulation model (ABM) to cover those aforementioned needs, where each individual in the population was considered an \enquote{agent} \cite{okamoto2018}.
 
 sPEGG starts with a set of simulation parameters defined and set by programmers, and after a certain amount of time steps, it provides the population dynamic data specific to those defined parameters earlier \cite{okamoto2018}. Interestingly, in this Big Data world where the global wildlife and field ecological database is massively growing, there comes a compelling question of whether the evolutionary patterns in such data can be explained using sPEGG's architecture; and if so, we need to estimate its simulation parameters that will eventually reconstruct those similar patterns observed in real population data.
 
@@ -92,7 +94,7 @@ Given that opportunity, we essentially asked ourselves if it would be feasible t
 
 \section{Objectives}
 
-In this study, we aimed to build a neural network pipeline incorporating two different sPEGG simulation models, one whose all genes contributed equally to the reproductive potential, another whose some genes contributed more to reproduction than other genes. To start easy, we only set 3 parameters, consisting of the recombination rates of both 3 loci in the model set up, to be all simulation parameters and explore their effects onto the genotypes that control the reproductive potential. We used the pre-implemented \textbf{NeuralABM} infrastructure to automate the workflow at ease, from sequencing population data and preparing for training dataset, to training a neural network and drawing its diagnostic plots \cite{thgaskin2023neural}. NeuralABM also makes parameter inputting (both Data Generation, ABM, and Neural Network parameters) more convenient. There is a note here, though, is that NeuralABM only supplies an infrastructure to automate the Neural Net training process, but does not provide users with a Neural Network model, which means users have to use PyTorch to build their desired Neural Network architecture, although it does provide the implementation of a very simple feed-forward network model \cite{thgaskin2023neural}.
+In this study, we aimed to build a neural network pipeline incorporating a sPEGG simulation model. To start easy, we only set 3 parameters, consisting of the recombination rates of both 3 loci in the model set up, to be all simulation parameters and explore their convergences. We used the pre-implemented \textbf{NeuralABM} infrastructure to automate the workflow at ease, from sequencing population data and preparing for training dataset, to training a neural network and drawing its diagnostic plots \cite{thgaskin2023neural}. NeuralABM also makes parameter inputting (both Data Generation, ABM, and Neural Network parameters) more convenient. There is a note here, though, is that NeuralABM only supplies an infrastructure to automate the Neural Net training process, but does not provide users with a Neural Network model, which means users have to use programming to build their desired Neural Network architecture themselves, although it does provide the implementation of a very simple feed-forward network model \cite{thgaskin2023neural}.
 
 \section{Methodology}
 \subsection{Population Data Availability}
@@ -111,43 +113,33 @@ Once our population dynamic data were generated and sequenced, for each simulati
 
 In order to construct our population simulation models, the sPEGG codebase was imported. Such a codebase implemented fundamental population movements such as reproduction, deaths, and even lower-order movements such as fertilization, mutations, and recombinations \cite{okamoto2018}. The performance of any models built upon sPEGG codebase is enhanced by manipulating the parallelizing advantage of GPUs using \textbf{CUDA} library, a branch of \textbf{C++} language \cite{cuda2008}.
 
-To fit into the time frame of the coursework and also keep the pipeline implementation simple, we decided to use the very basic design of a simulation model from sPEGG described in section 2.2 of the article \cite{okamoto2018} or in the \texttt{Tutorial\_Simulation} example in the sPEGG codebase (appendix \ref{app:code}). \emph{We aimed to study different convergences of two versions of the sPEGG simulation model: (1) each gene contributes equally to the reproductive advantage, (2) one gene contributes more to such than others}. Therefore, one key difference in the implementation of these two versions lies in the genotype-phenotype mapping between a genotype and the reproduction-determinant phenotype (algorithms \ref{norepro} and \ref{repro}).
+To fit into the time frame of the coursework and also keep the pipeline implementation simple, we decided to use the very basic design of a simulation model from sPEGG described in section 2.2 of the article \cite{okamoto2018} or in the \texttt{Tutorial\_Simulation} example in the sPEGG codebase (appendix \ref{app:code}). \emph{We aimed to study the convergences of aforementioned three parameters of our example sPEGG simulation model}.
 
-\begin{algorithm}[H]
-\caption{sPEGG simulation model with all genes playing the equal roles in reproduction. In this procedure shown, two loci contribute equally to the reproduction phenotype.} \label{norepro}
+The challenge emerged when the simulation model was written in C, but the overall NeuralABM pipeline and PyTorch Neural Network model were supposed to be in Python. In addressing it, we linked the object code of the simulation model directly with the Python code via \textbf{Pybind11}, which allowed us to call a C function directly in Python code as if it were a Python function \cite{pybind11}. That way, we could easily transfer the simulation parameters from our overall Python pipeline to C-implemented simulation model, then such a model would transfer the simulated population output back to the earlier Python pipeline once the simulation finished. The github branch of the sPEGG codebase version that does support the pybind11 linker can be seen in appendix \ref{app:code}. The algorithm for such a C-Python linker employed in our project can be obtained in algorithm \ref{cpylinker}.
+
+\begin{algorithm}[h]
+\caption{sPEGG simulation model in C++ exposed to Python for convenience purposes.} \label{cpylinker}
 \begin{algorithmic}[1]
-    \Function{mapGenotypeToPhenotype}{momLocus1, dadLocus1, momLocus2, dadLocus2, coefsList}
-        \State constant = coefsList[1]
-        \State locus1Coef = coefsList[2]
-        \State locus2Coef = coefsList[3]
-        \State fecundity = constant + locus1Coef $\cdot0.5\cdot$ (momLocus1 + dadLocus1) + locus2Coef $\cdot0.5\cdot$ (momLocus2 + dadLocus2)
-        \State \Return fecundity
+    \Function{exposeToPythonSimulate}{loci1RecomRate, loci2RecomRate, loci3RecomRate}
+        \Comment{This exposes the simulate C function to Python language}
+        \State linker = \Call{exposeToPython}{simulate}
+        \State \Call{addParams}{linker, loci1RecomRate, loci2RecomRate, loci3RecomRate}
+        \State simulatedPopData = \Call{execute}{linker}
+        \State \Return simulatedPopData
+    \EndFunction
+    \\
+    \Function{simulate}{loci1RecomRate, loci2RecomRate, loci3RecomRate}
+        \Comment{                   This is the function in C++/CUDA that powers sPEGG}
+        \State simulatedPopData = \Call{sPEGG}{lociRecomRate, loci2RecomRate, loci3RecomRate}
+        \State \Return simulatedPopData
     \EndFunction
 \end{algorithmic}
 \vspace{0.6em}
 \end{algorithm}
 
-\begin{algorithm}[H]
-    \caption{sPEGG simulation model with genes playing unequal roles in reproduction. In this procedure shown, locus one influences fecundity 4 times stronger than locus 2.} \label{repro}
-    \begin{algorithmic}[1]
-        \Function{mapGenotypeToPhenotype}{momLocus1, dadLocus1, momLocus2, dadLocus2, coefsList}
-            \State constant = coefsList[1]
-            \State locus1Coef = coefsList[2]
-            \State locus2Coef = coefsList[3]
-            \State fecundity = constant + locus1Coef $\cdot0.5\cdot4\cdot$ (momLocus1 + dadLocus1) + locus2Coef $\cdot0.5\cdot$ (momLocus2 + dadLocus2)
-            \State \Return fecundity
-        \EndFunction
-    \end{algorithmic}
-    \vspace{0.6em}
-\end{algorithm}
-
-We hypothesized that the Neural Network having the first sPEGG model would not converge well, while the one with differential reproductive genetic influences should somewhat converge in terms of the parameter(s) driving the evolution of the genotype (or locus) that had the strongest influence on the fecundity. In this case, both of these two models had three simulation parameters, which were the \emph{recombination rates for both three loci}. The implementation of both these two models can be found in appendix \ref{app:code}.
-
-The challenge emerged when the simulation models were written in C, but the overall NeuralABM pipeline and PyTorch Neural Network model were supposed to be in Python. In addressing it, we linked the object code of the simulation models directly with the Python code via \textbf{Pybind11}, which allowed us to call a C function directly in Python code as if it were a Python function \cite{pybind11}. That way, we could easily transfer the simulation parameters from our overall Python pipeline to C-implemented simulation models, then such models would transfer the simulated population output back to the earlier Python pipeline once the simulation finished. The github branch of the sPEGG codebase version that does support the pybind11 linker can be seen in appendix \ref{app:code}.
-
 \subsection{Neural Network Architecture}
 
-Again, for simplicity, we decided to start out with a simple feed-forward neural network architecture that receives an input of size corresponding to the size of the training dataset, and has three hidden nodes, so that the only layer inside of such a network would immediately produce a vector of only three elements, which were finally used as three simulation parameters, as in figure \ref{fig:nn}. Given the complete elimination of the normalized complexity of a typical neural network (most networks have multiple layers) and any further hidden nodes beyond the required amount to be able to get to the output size (in this case, 3), the job for our neural network was merely a numerical optimization task. The reason for this over-simplification was because of the inherent gradient vanishing problem \cite{gradientvanishing2013}, often happening when applying the chain rule across a very sophisticated network, and it would be better to just start out simple when we had not yet taken into account any probable inconsistency of the simulation models. That way, we could lay out a solid foundation, upon which we would, in the future, build more complicated but predictive architectures.
+Again, for simplicity, we decided to start out with a simple feed-forward neural network architecture that receives an input of size corresponding to the size of the training dataset, and has three hidden nodes, so that the only layer inside of such a network would immediately produce a vector of only three elements, which were finally used as three simulation parameters, as in figure \ref{fig:nn}. Given the complete elimination of the normalized complexity of a typical neural network (most networks have multiple layers) and any further hidden nodes beyond the required amount to be able to get to the output size (in this case, 3), the job for our neural network was merely a numerical optimization task. The reason for this over-simplification was because of the inherent gradient vanishing problem \cite{gradientvanishing2013}, often happening when applying the chain rule across a very sophisticated network, and it would be better to just start out simple when we had not yet taken into account any probable inconsistency of the simulation model. That way, we could lay out a solid foundation, upon which we would, in the future, build more complicated but predictive architectures.
 
 \begin{figure}[H]
     \centering
@@ -180,12 +172,13 @@ Every neural network model must own a loss function that compute the \enquote{er
 \section{Result}
 \subsection{Platform Incompatibility}
 
-With the integration of sPEGG into the overall neural network architecture, we had believed that it would have smoothly auto-differentiated the three parameters (recombination rates of 3 loci) in parallel, until we discovered that every component of the neural network had to be programmed in PyTorch to be able to benefit from its auto-differentiation feature \cite{paszke2017automatic}. Here, our sPEGG models were both crafted even in another language, so when applying the chain rule, the gradient kept back-propagating until it encountered sPEGG, which was when the \enquote{computational graph} got disconnected \cite{paszke2017automatic}. That is because PyTorch \enquote{did not know} how to differentiate a numerical function programmed using an entire other platform, so the chain rule was unfortunately halted there.
+With the integration of sPEGG into the overall neural network architecture, we had believed that it would have smoothly auto-differentiated the three parameters (recombination rates of 3 loci) in parallel, until we discovered that every component of the neural network had to be programmed in PyTorch to be able to benefit from its auto-differentiation feature \cite{paszke2017automatic}. Here, our sPEGG model was crafted even in another language, so when applying the chain rule, the gradient kept back-propagating until it encountered sPEGG, which was when the \enquote{computational graph} got disconnected \cite{paszke2017automatic}. That is because PyTorch \enquote{did not know} how to differentiate a numerical function programmed using an entire other platform, so the chain rule was unfortunately halted there.
 
-So what was the workaround? Although Neural Network engineering with Pytorch requires every process and layer to be entirely written in terms of PyTorch tensors and operations, but it does provide a \enquote{wrapper} for non-PyTorch-native components. Here is how it functions:
+So what was the workaround? Although Neural Network engineering with Pytorch requires every process and layer to be entirely written in terms of PyTorch tensors and operations, but it does provide a \enquote{wrapper} for non-PyTorch-native components. Figure \ref{code:autogradwrapper} demonstrates our implementation of such a wrapper.
 
-\begin{figure}[H]
-\begin{lstlisting}
+\begin{figure}[h]
+    \centering
+    \begin{lstlisting}
     class Loss(torch.autograd.Function):
         @staticmethod
         def forward(threeRecomRates, trainingData):
@@ -212,16 +205,19 @@ So what was the workaround? Although Neural Network engineering with Pytorch req
                 gradientThreeRecomRates[i] = (y - yh) / h
             return gradientThreeRecomRates
 
-\end{lstlisting}
+    \end{lstlisting}
+    \vspace{0.6em}
+    \caption{PyTorch auto-gradient wrapper for sPEGG simulation model, not written in PyTorch platform}
+    \label{code:autogradwrapper}
 \end{figure}
 
 This essentially wraps sPEGG around PyTorch, which allows PyTorch to be able to compute sPEGG's gradients and seamlessly backpropagate. However, this workaround \textbf{approximates}, but does not \textbf{auto-differentiate}, each parameter's gradient, leading to an approximation error. Moreover, the above script only computes the derivative for one parameter at a time, so we did not really leverage the parallelizing advantage of PyTorch auto-differentiation feature here. Because of this platform incompatibility, our neural network was only performing as much as a regular numerical optimization function such as \texttt{optim()} in R \cite{r2024}, or \texttt{scipy.optimize.minimize()} in Python \cite{scipy2020}.
 
-\subsection{Roles of the Fecundity-Controlling Genotype}
+\subsection{Training Loss and Simulation Parameter Convergences}
 
-Contradicting to our hypothesis, the training loss for the model without any dinstinct fecundity-enhancing genotype showed a more consistently decreasing loss progression (figure \ref{fig:nogendiffloss}), while the one with loci 1 distinctly enhancing fecundity showed a more erratic yet still decreasing loss (figure \ref{fig:gendiffloss}).
+Our training result shows that the loss gradually decreased over the epochs, a common pattern observed in any typical neural network training phase (figure \ref{fig:nogendiffloss}), meaning that our neural network architecture indeed converged. However, it did not decrease much as expected, only by a margin of $10^{-2}$ unit of loss. In addition, its trend is more of an erratic decrease, as opposed to a smooth decrease obtained in the training loss of most neural network models.
 
-The progression of three parameters (recombination rates of both 3 loci) was also distinct between two models. For the model without a specific fecundity genotype, genotype 1 recombination rate smoothly converged to near 0, while that of the other two genotypes smoothly converged to 1 (figure \ref{fig:nogendiffpred}). Conversely, for the other model with genotype 1 enhancing fecundity, the parameter convergences were a bit bumpier and eventually landed somewhere between 0 and 1, but never on those two bounds (figure \ref{fig:gendiffpred}). This suggests that with a fecundity-enhancing genotype, the overall evolutionary picture experiences a \enquote{tug-of-war} between the interwoven effects of both mortality-controlling and fecundity-controlling genotypes.
+The progressions of the three predicted simulation parameters were also relatively consistent, despite the negligible oscillation in the recombination rate of locus 1 during the first 15 epochs (figure \ref{fig:nogendiffpred}). Such a recombination rate was eventually smoothened out and converged to near 0. This means there was \emph{no recombination happening in meiosis}, and two genes on the same chromosome (including that at loci 1) had better always be inherited together. In the contrary, recombination rates of the two other loci progressed upward until their convergences to almost 1. This implies that crossovers must happen at some spots along the chromosome segments between genes at loci 2 and 3 with other genes on the same chromosomes.
 
 \begin{figure}[h]
     \centering
@@ -231,22 +227,86 @@ The progression of three parameters (recombination rates of both 3 loci) was als
     \figurewithcaption{assets/speggabm_pred.png}{nogendiffpred}{
         Three-parameter prediction of the neural network architecture incorporating sPEGG model without any fecundity-determining genotype.
     }
-    \caption{Neural Network incorporating sPEGG model without any fecundity-determining genotype} \label{fig:speggabmstuff}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \figurewithcaption{assets/spegggendiff_loss.png}{gendiffloss}{
-        Training loss of the neural network architecture incorporating sPEGG model with loci 1 controlling fecundity.
-    }
-    \figurewithcaption{assets/spegggendiff_pred.png}{gendiffpred}{
-        Three-parameter prediction of the neural network architecture incorporating sPEGG model with loci 1 controlling fecundity.
-    }
-    \caption{Neural Network incorporating sPEGG model with loci 1 controlling fecundity} \label{fig:spegggendiffstuff}
+    \caption{Neural Network incorporating sPEGG model} \label{fig:speggabmstuff}
 \end{figure}
 
 \section{Discussion}
+\subsection{On Platform Incompatibility}
 
+We could not utilize PyTorch's automatic differentiation because the sPEGG codebase was implemented in C++/CUDA. A core requirement for PyTorch's autograd is that every operation must be performed using PyTorch-native tensors \cite{paszke2017automatic}. This is because the framework relies on \emph{pre-defined derivative formulas} mapped to specific tensor operations; during backpropagation, these formulas are executed in a sequence to compute the gradient via the chain rule \cite{paszke2017automatic}. This debunks a common myth among the applied mathematics research community that PyTorch can magically auto-differentiate the implementation of any mathematical models written in any other platforms, such as NumPy, or even in other languages such as C \cite{paszke2017automatic}. Of course, we could keep our gradient approximation workaround as our standard differentiation method, but this has long been discouraged, because it could never yield a consistently accurate derivative and could not be parallelized with GPU resources \cite{thgaskin2023neural}.
+
+That said, our suggestion to overcome this challenge may be to re-implement the sPEGG codebase using PyTorch tensors and operations to ensure the framework consistency and hence a seamless backpropagation.
+
+\subsection{On model convergence} % Also talking about a small loss decrease & indifferentiability
+
+The most notable result is the insubstantial yet erratic decrease in the loss value, which was only by $10^{-2}$, so this essentially posed a question that whether our model prediction had \enquote{improved at all}. Additionally, the erratic loss decrease, as opposed to a typical steady loss decrease, might suggest our sPEGG population dynamic simulation model is somewhat indifferentiable. Specifically, inspecting the sPEGG model more closely, one can observe that sPEGG randomly initializes its population constructs (i.e. genetic distribution, age, etc.) when the simulation starts, and only uses those three simulation parameters to affect the population dynamics, but such parameters are never involved as variables in the population dynamic mathematical formulas. Unfortunately, the sPEGG model cannot be expected to be differentiable if the history of the population was randomly initialized and the simulation parameters are never parts of the formulas to calculate the population dynamics, given that the resulting population dynamics were used to compute the loss. For example, if the recombination rate at loci 1 is 0.3, there should be 30\% of individuals experiencing a crossover involving loci 1, but the sampling of which individuals included in that 30\% should never be differentiable (i.e. what is the derivative at $x = 0.3$ in terms of this sampling process?). This is, unfortunately, another bottleneck that severs the chain rule in backpropagation of our network. Following this, if the loss function, which also includes the sPEGG simulation, is indifferentiable, how could the network even be able to figure out any direction to update the parameters? A full description of this problem can be seen in algorithm \ref{alg:indef}.
+
+The solution to this issue is to also include the parameters that participate in the population initialization in the first time step, because those may be directly involved in the mathematical formula constructing the population genetics. For the sampling process, the random sampling reparameterization trick could be considered \cite{autoencoding2014} so that each randomized \enquote{agent} could be differentiable in relation to its prior mean and standard deviation. Once we solved the question of \emph{how to make sampling differentiable}, our sPEGG simulation model would also be differentiable by reduction.
+
+Another task is to discuss the convergences as well as the biological meaning of the simulation parameters. First, they had smooth and monotonic convergences, suggesting that the model performed decently in predicting these parameters. Second, in order to examine their biological significance, we need to look at the training dataset, which is essentially the mean genotype at locus 1 of the population across all 10 time steps, as shown in figure \ref{fig:traindata}.
+
+The convergence of locus 1 to 0 is consistent with the preservation of its specific genotypic profile. In our sPEGG model, locus 1 plays a key pleiotropic role in both \emph{enhancing fecundity and increasing mortality}. According to the Antagonistic Pleiotropic Theory of Aging, chromosomal recombination involving this gene can introduce beneficial variance for early-life reproductivity, although it may disrupt high-survival lineages \cite{antagonisticcoevolution2018}. That implies if recombination involving locus 1 commonly had occurred in the population, its average genotypic value at locus 1 must have also increased over time to reflect such a genotypic advantage. However, such mean genotypic value in our training data rather witnesses an overall decline. This suggests that the population is prioritizing survival over fecundity, making the \enquote{shuffling} effect of recombination unnecessary or even detrimental. Hence, the convergence of recombination rate at the first locus to nearly zero should be explainable.
+
+Next, we are going to address the absolute convergence of recombination rate in the second locus to 1. The gene at locus 2 was defined in our sPEGG model as another polygenic factor contributing to more reproductivity, along with locus 1, but it has nothing to do with mortality. When the first locus cannot recombine much to provide advantageous genetic variance to enhance population-wise reproduction, the second locus must max out its recombination to ensure the population's reproductive fitness. According to the Fisher-Mueller Theory, beneficial mutants should be shuffled via recombination to finally be assembled and become a single maximum advantageous genetic profile \cite{fishermuller}. Following this, the gene at locus 2 must maximally recombine to uncouple its beneficial effects from the mortality baggage of locus 1, thereby bypassing the stasis at the first locus and guaranteeing the population's consistent reproductive potential.
+
+Finally, although locus 3 was never defined as being reproductively beneficial in our sPEGG model other than coding for the body color, its recombination rate still converged to 1. We would like to characterize this as \enquote{neutral recombination}, as recombination event associated with this gene is independent from whether the population would receive any additional survival or reproductive advantages. Still, had its recombination rate remained low, this gene would have been subject to allelic hitchhiking, where neutral genes are dragged towards fixation by their physical proximity to either any harmful or beneficial genes \cite{hitchhiking}. Thus, this parameter converged to 1 to decouple this gene from these selective pressures, preventing these \enquote{spurious correlations} and hence maintaining a stable persistence of the population's body color profile.
+
+\begin{algorithm}[h]
+    \begin{algorithmic}[1]
+        \Function{initializePop}{}
+            \Comment{initial population profile was randomized, which is indifferentiable}
+            \State sex = \Call{random}{male=0, female=1, ratio=0.5, size=startingSize}
+            \State genetics = \Call{random}{mean, deviation, startingSize}
+            \State phenotypes = \Call{mapping}{genetics}
+            \State \dots
+        \EndFunction
+        \\
+        \Function{updatePop}{recomRate}
+            \Comment{Called per one time step}
+            \State numIndividualsHaveRecom = recomRate $\cdot$ currentPopSize
+            \State indexOfIndividualsHaveRecom = \Call{sampleIndex}{numIndividualsHaveRecom, currentPopSize}
+            \Comment{sampling is indifferentiable}
+            \For{individualIndex = 0 $\to$ numIndividualsHaveRecom}
+                \If{individualIndex $\in$ indexOfIndividualsHaveRecom}
+                    \State \Call{recombinate}{genetics, individualIndex}
+                \EndIf
+            \EndFor
+        \EndFunction
+        \\
+        \Function{simulate}{recomRate}
+            \Comment{simulate the evolution}
+            \State \Call{initializePop}{}
+            \For{i = 1 $\to$ nTimeSteps}
+                \State \Call{updatePop}{recomRate}
+            \EndFor
+        \EndFunction
+    \end{algorithmic}
+    \vspace{0.6em}
+    \caption{Indifferentiable bottlenecks in population dynamic simulation. These all go into our network's loss function definition.} \label{alg:indef}
+\end{algorithm}
+
+
+\begin{figure}
+    \centering
+    \begin{lstlisting}
+        tensor([[0.6111],
+                [0.5500],
+                [0.4500],
+                [0.1000],
+                [0.3750],
+                [0.4500],
+                [0.3158],
+                [0.4375],
+                [0.1000],
+                [0.4000]])
+    \end{lstlisting}
+    \caption{Training Data (mean genotype at locus 1) for the network model}
+    \label{fig:traindata}
+\end{figure}
+
+\subsection{Implications}
+
+By our nontrivial integration of such a sophisticated agent-based simulation model into a neural network architecture and discussion of current differential bottlenecks, our work lays a solid foundation for novel Hybrid Simulation - Neural Network Architectures, especially in this evolutionary modelling context. Our identification of specific points where stochasticity severs the gradient chain provides a technical roadmap for future evolutionary modelers to refine these \enquote{opaque} interfaces. This will shift the landscape from manual population-controlling parameter tuning to an automatic and end-to-end discovery of ecological and evolutionary insights of a given population. Once these mathematical challenges have been resolved, we would move towards incorporating more population-governing parameters, facilitating deeper predictive insights and guiding more informed decisions for conservation management.
 
 
 \bibliographystyle{plain}
