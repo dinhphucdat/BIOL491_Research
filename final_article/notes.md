@@ -40,3 +40,30 @@ A quick overview and rundown of the paper.
 ## Results
 ## Discussion
 
+## Revision
+- Biological implication of the software / program
+- Two types of sciences
+    1. Target concrete problem - basic science - blue sky
+        - Blue skies science
+        - Open ended - try to understand the world
+        - I.e. Astronomy - does not change anything in real life, but enhance knowledge. Does not matter if we solve anything, we just want to know about the world.
+    2. Applied science - THE PAPAER IS WIRED IN THIS WAY
+        - Engineering -> impact
+        - Conservation, healthcare, medicine
+    3. Basic science
+        - Does it really MATTER to know the evolution dynamics of the animals?
+    => WE ARE LOOKING FROM THE PERSPECTIVE OF BASIC SCIENCE!
+
+- 2 sections: INTRODUCTION & IMPLICATIONS
+
+- Why would biologists have to care about our results? GIVE IT SOME THOUGHTS
+    - Even if climate change stops, why is this research still crucial?
+    - Why do non-specialists still have interest in our work?
+
+- Antagonistic Pleiotropy (In Aging): based on a single gene -> trade-off in different phenotypes.
+    - Endurance vs. Speed
+    - Aging: Reproductivity vs. Life span
+    - Our model: Mortality vs. Reproductive potential.
+
+    - ADD: Convergence of the reproduction rate
+
